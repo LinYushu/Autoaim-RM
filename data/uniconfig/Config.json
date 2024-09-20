@@ -3,7 +3,7 @@
         "System" : {
             "AutoFire" : true,
             "AutoEnemy" : true,
-            "AutoRune" : true,
+            "AutoRune" : false,
             "AutoCapture" : false
         },
         "ImageThread" : {
@@ -21,7 +21,7 @@
             "PointSkip" : false
         },
         "Control" : {
-            "Serial" : true,
+            "Serial" : false,
             "Timeout" : true,
             "ManuCapture" : false,
             "ManuFire" : false,
@@ -73,8 +73,8 @@
 
     "Camera" : {
         "CamLensDir" : "/etc/openrm/CamLens.json",
-        "VideoSaveDir" : "/home/nvidia/Code/TJURM-Aiming/data/video",
-        "DebugSaveDir" : "/home/nvidia/Code/TJURM-Aiming/data/debug",
+        "VideoSaveDir" : "/home/xdxg/grad_project_workspace/TJURM-2024/data/video",
+        "DebugSaveDir" : "/home/xdxg/grad_project_workspace/TJURM-2024/data/debug",
         "Base" : {
             "CameraType" : "DaHeng1280_1024",
             "LensType" : "Prime6mm",

@@ -101,7 +101,7 @@ bool Pipeline::fourpoints(std::shared_ptr<rm::Frame> frame) {
 
         // 根据推理结果设置装甲板ID
         rm::ArmorID armor_id = (rm::ArmorID)armor_class_map[yolo_rect.class_id];
-        rm::ArmorColor armor_color = (rm::ArmorColor)armor_class_map[yolo_rect.color_id];
+        rm::ArmorColor armor_color = (rm::ArmorColor)armor_color_map[yolo_rect.color_id];
 
         // 创建装甲板对象并设置参数
         rm::Armor armor;
