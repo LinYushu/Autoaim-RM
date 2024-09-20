@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.12)
 project(TJURM-2024)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # 设置编译指令
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_BUILD_TYPE DEBUG)
