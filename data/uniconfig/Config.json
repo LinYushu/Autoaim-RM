@@ -79,6 +79,7 @@
             "CameraType" : "DaHeng1280_1024",
             "LensType" : "Prime6mm",
             "Width" : 1280,
+            "Height" : 1024,
             "ExposureTime" : 3000.0,
             "FrameRate" : 200.0,
             "Gain" : 24.0

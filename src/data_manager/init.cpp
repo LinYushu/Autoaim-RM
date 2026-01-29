@@ -6,6 +6,7 @@
 #include <chrono>
 #include "data_manager/base.h"
 #include "data_manager/param.h"
+#include "data_manager/video_source.h"
 #include "threads/pipeline.h"
 #include "threads/control.h"
 #include "garage/garage.h"
@@ -47,130 +48,56 @@ bool init_camera() {
     auto param = Param::get_instance();
     auto control = Control::get_instance();
 
-    // 获取相机参数矩阵json
-    nlohmann::json camlens;
-    std::string camlen_path = (*param)["Camera"]["CamLensDir"];
-    try {
-        std::ifstream camlens_json(camlen_path);
-        camlens_json >> camlens;
-        camlens_json.close();
-    } catch (std::exception& e) {
-        std::string err_str = "Failed to load CamLens json: " + std::string(e.what());
-        rm::message(err_str, rm::MSG_ERROR);
-        return false;
-    }
+    bool is_simulation = true;
+    std::string video_path = "0"; // "0" 代表使用笔记本摄像头
 
-    // 获取相机数量
-    int camera_num;
-    bool flag_camera = rm::getDaHengCameraNum(camera_num);
-    Data::camera.clear();
-    Data::camera.resize(camera_num + 1, nullptr);
-    if(!flag_camera) {
-        rm::message("Failed to get camera number", rm::MSG_ERROR);
-        return false;
-    }
-    rm::message("get camera number "+ std::to_string(camera_num), rm::MSG_NOTE);
-    // 初始化单相机
-    if(camera_num == 1) {
+    if (is_simulation) {
+        rm::message("Initializing Simulation Camera (Webcam/Video)...", rm::MSG_WARNING);
+
         Data::camera_index = 1;
         Data::camera_base = 1;
-        Data::camera_far = 1;
 
-        double exp = (*param)["Camera"]["Base"]["ExposureTime"];
-        double gain = (*param)["Camera"]["Base"]["Gain"];
-        double rate = (*param)["Camera"]["Base"]["FrameRate"];
-        std::string camera_type = (*param)["Camera"]["Base"]["CameraType"];
-        std::string lens_type = (*param)["Camera"]["Base"]["LensType"];
-        std::vector<double> camera_offset = (*param)["Car"]["CameraOffset"]["Base"];
+        // 读取参数配置中的宽高 (确保与模型输入一致)
+        int width = (*param)["Camera"]["Laptop"]["Width"];
+        int height = (*param)["Camera"]["Laptop"]["Height"];
 
-        Data::camera[1] = new rm::Camera();
-        flag_camera = rm::openDaHeng(
-            Data::camera[1], 1, &Data::yaw, &Data::pitch, &Data::roll,
-            false, exp, gain, rate);
+        // 实例化 VideoSource
+        Data::camera.resize(2, nullptr);
+        auto* sim_cam = new VideoSource(video_path, width, height);
+        Data::camera[1] = sim_cam;
 
-        if(!flag_camera) {
-            rm::message("Failed to open camera", rm::MSG_ERROR);
-            return false;
+        rm::mallocYoloCameraBuffer(
+            &Data::camera[1]->rgb_host_buffer, 
+            &Data::camera[1]->rgb_device_buffer, 
+            width, 
+            height
+        );
+
+        try {
+            std::string camlen_path = (*param)["Camera"]["CamLensDir"];
+            std::ifstream camlens_json(camlen_path);
+            nlohmann::json camlens;
+            camlens_json >> camlens;
+            
+            std::string camera_type = (*param)["Camera"]["Laptop"]["CameraType"];
+            std::string lens_type = (*param)["Camera"]["Laptop"]["LensType"];
+            std::vector<double> camera_offset = (*param)["Car"]["CameraOffset"]["Base"];
+
+            Param::from_json(camlens[camera_type][lens_type]["Intrinsic"], Data::camera[1]->intrinsic_matrix);
+            Param::from_json(camlens[camera_type][lens_type]["Distortion"], Data::camera[1]->distortion_coeffs);
+            
+            rm::tf_rotate_pnp2head(Data::camera[1]->Rotate_pnp2head, camera_offset[3], camera_offset[4], 0.0);
+            rm::tf_trans_pnp2head(Data::camera[1]->Trans_pnp2head, camera_offset[0], camera_offset[1], camera_offset[2], camera_offset[3], camera_offset[4], 0.0);
+            
+        } catch (...) {
+            rm::message("Warning: Failed to load camera intrinsics for simulation.", rm::MSG_WARNING);
         }
 
-        Param::from_json(camlens[camera_type][lens_type]["Intrinsic"], Data::camera[1]->intrinsic_matrix);
-        Param::from_json(camlens[camera_type][lens_type]["Distortion"], Data::camera[1]->distortion_coeffs);
-        rm::tf_rotate_pnp2head(Data::camera[1]->Rotate_pnp2head, camera_offset[3], camera_offset[4], 0.0);
-        rm::tf_trans_pnp2head(Data::camera[1]->Trans_pnp2head, camera_offset[0], camera_offset[1], camera_offset[2], camera_offset[3], camera_offset[4], 0.0);
-        rm::mallocYoloCameraBuffer(&Data::camera[1]->rgb_host_buffer, &Data::camera[1]->rgb_device_buffer, Data::camera[1]->width, Data::camera[1]->height);
-
-
-
-    // 初始化双相机
-    } else if (camera_num == 2) {
-        double exp_base = (*param)["Camera"]["Base"]["ExposureTime"];
-        double gain_base = (*param)["Camera"]["Base"]["Gain"];
-        double rate_base = (*param)["Camera"]["Base"]["FrameRate"];
-        int width_base = (*param)["Camera"]["Base"]["Width"];
-
-        double exp_far = (*param)["Camera"]["Far"]["ExposureTime"];
-        double gain_far = (*param)["Camera"]["Far"]["Gain"];
-        double rate_far = (*param)["Camera"]["Far"]["FrameRate"];
-        int width_far = (*param)["Camera"]["Far"]["Width"];
-
-        std::string camera_type_base = (*param)["Camera"]["Base"]["CameraType"];
-        std::string lens_type_base = (*param)["Camera"]["Base"]["LensType"];
-
-        std::string camera_type_far = (*param)["Camera"]["Far"]["CameraType"];
-        std::string lens_type_far = (*param)["Camera"]["Far"]["LensType"];
-
-        std::vector<double> camera_offset_base = (*param)["Car"]["CameraOffset"]["Base"];
-        std::vector<double> camera_offset_far = (*param)["Car"]["CameraOffset"]["Far"];
-
-
-        for(int i = 1; i <= camera_num; i++) {
-            rm::message("begin open camera "+ std::to_string(i), rm::MSG_NOTE);
-            Data::camera[i] = new rm::Camera();
-            flag_camera = rm::openDaHeng(Data::camera[i], i, &Data::yaw, &Data::pitch, &Data::roll);
-
-            if(!flag_camera) {
-                rm::message("Failed to open camera: " + std::to_string(i), rm::MSG_ERROR);
-                return false;
-            }
-            rm::message("camera width "+ std::to_string(Data::camera[i]->width), rm::MSG_NOTE);
-            if (Data::camera[i]->width == width_base) {
-                Data::camera_base = i;
-                Data::camera_index = i;
-                flag_camera = setDaHengArgs(Data::camera[i], exp_base, gain_base, rate_base);
-                if(!flag_camera) {
-                    rm::message("Failed to set camera args: " + std::to_string(i), rm::MSG_ERROR);
-                    return false;
-                }
-
-                Param::from_json(camlens[camera_type_base][lens_type_base]["Intrinsic"], Data::camera[i]->intrinsic_matrix);
-                Param::from_json(camlens[camera_type_base][lens_type_base]["Distortion"], Data::camera[i]->distortion_coeffs);
-                rm::tf_rotate_pnp2head(Data::camera[i]->Rotate_pnp2head, camera_offset_base[3], camera_offset_base[4], 0.0);
-                rm::tf_trans_pnp2head(Data::camera[i]->Trans_pnp2head, camera_offset_base[0], camera_offset_base[1], camera_offset_base[2], camera_offset_base[3], camera_offset_base[4], 0.0);
-                rm::mallocYoloCameraBuffer(&Data::camera[i]->rgb_host_buffer, &Data::camera[i]->rgb_device_buffer, Data::camera[i]->width, Data::camera[i]->height);
-
-            } else if (Data::camera[i]->width == width_far) {
-                Data::camera_far = i;
-                flag_camera = setDaHengArgs(Data::camera[i], exp_far, gain_far, rate_far);
-                if(!flag_camera) {
-                    rm::message("Failed to set camera args: " + std::to_string(i), rm::MSG_ERROR);
-                    return false;
-                }
-
-                Param::from_json(camlens[camera_type_far][lens_type_far]["Intrinsic"], Data::camera[i]->intrinsic_matrix);
-                Param::from_json(camlens[camera_type_far][lens_type_far]["Distortion"], Data::camera[i]->distortion_coeffs);
-                rm::tf_rotate_pnp2head(Data::camera[i]->Rotate_pnp2head, camera_offset_far[3], camera_offset_far[4], 0.0);
-                rm::tf_trans_pnp2head(Data::camera[i]->Trans_pnp2head, camera_offset_far[0], camera_offset_far[1], camera_offset_far[2], camera_offset_far[3], camera_offset_far[4], 0.0);
-                rm::mallocYoloCameraBuffer(&Data::camera[i]->rgb_host_buffer, &Data::camera[i]->rgb_device_buffer, Data::camera[i]->width, Data::camera[i]->height);
-
-            } else {
-                rm::message("Invalid camera width: " + std::to_string(Data::camera[i]->width), rm::MSG_ERROR);
-                return false;
-            }
-        }
-
-    } else {
-        rm::message("Invalid camera number: " + std::to_string(camera_num), rm::MSG_ERROR);
-        return false;
+        // 启动采集线程
+        sim_cam->startCapture();
+        
+        rm::message("Simulation Camera Started.", rm::MSG_OK);
+        return true; // 跳过后续真实相机初始化
     }
     return true;
 }
@@ -187,7 +114,7 @@ bool deinit_camera() {
 
         delete Data::camera[i];
         Data::camera[i] = nullptr;
-        rm::closeDaHeng();
+        // rm::closeDaHeng();
     }
     rm::message("Camera deinit success", rm::MSG_WARNING);
     return true;
