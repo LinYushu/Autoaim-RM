@@ -68,6 +68,7 @@ void Control::state() {
 
     // 通过电控获取敌方颜色
     Data::enemy_color = get_enemy();
+    // Data::enemy_color = ARMOR_COLOR_RED; // 手动设置颜色
     Data::self_color = (Data::enemy_color == rm::ARMOR_COLOR_BLUE) ? rm::ARMOR_COLOR_RED : rm::ARMOR_COLOR_BLUE;
 
     // 确定自瞄状态，开始录制

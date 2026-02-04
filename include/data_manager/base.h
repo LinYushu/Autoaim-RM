@@ -1,6 +1,11 @@
 #ifndef RM2024_DATA_MANAGER_BASE_H_
 #define RM2024_DATA_MANAGER_BASE_H_
 
+#define CAM_TYPE_HIK    1
+#define CAM_TYPE_DAHENG 2
+#define CAM_TYPE_UVC    3
+#define USE_CAMERA  CAM_TYPE_DAHENG
+
 #include <opencv2/opencv.hpp>
 #include <openrm.h>
 #include <Eigen/Dense>
@@ -67,6 +72,9 @@ extern int send_wait_time;
 
 void init_debug();
 bool init_camera();
+bool init_DaHeng();
+bool init_Hik();
+bool init_UVC();
 bool deinit_camera();
 void init_serial();
 void init_attack();
