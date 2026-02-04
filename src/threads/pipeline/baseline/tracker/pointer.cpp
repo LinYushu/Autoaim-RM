@@ -99,7 +99,7 @@ bool Pipeline::pointer(std::shared_ptr<rm::Frame> frame) {
     for (auto& yolo_rect : frame->yolo_list) {
         rm::Armor armor;
         armor.id = (rm::ArmorID)(armor_class_map[yolo_rect.class_id]);
-        armor.color = (rm::ArmorColor)(armor_color_map[yolo_rect.color_id]);
+        armor.color = (rm::ArmorColor)(armor_color_map[yolo_rect.class_id]);
         setArmorExtendRectIOU(armor, yolo_rect.box, frame->width, frame->height, roi_extend_w, roi_extend_h);
         armor.size = ARMOR_SIZE_SMALL_ARMOR;
         setArmorRectCenter(armor);
@@ -162,7 +162,9 @@ bool Pipeline::pointer(std::shared_ptr<rm::Frame> frame) {
             armor_max_angle_avg,
             armor_max_offset);
 
-        armor.color = rm::getArmorColorFromHSV(roi, best_pair);
+        // 禁用传统颜色判断方法，取消注释会导致把原本YOLO判断正确的结果改错
+        // armor.color = rm::getArmorColorFromHSV(roi, best_pair);
+        // rm::message("HSV color: " + std::to_string(armor.color));
 
         if (!flag) {
             if (Data::point_skip_flag) rm::message("No lightbar pair found", rm::MSG_NOTE);

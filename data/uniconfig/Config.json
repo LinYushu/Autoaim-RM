@@ -75,6 +75,15 @@
         "CamLensDir" : "/etc/openrm/CamLens.json",
         "VideoSaveDir" : "/home/xdxg/grad_project_workspace/TJURM-2024/data/video",
         "DebugSaveDir" : "/home/xdxg/grad_project_workspace/TJURM-2024/data/debug",
+        "Hik":{
+            "CameraType": "HikC1440_1080",
+            "LensType": "Prime8mm",
+            "Width": 1440,
+            "Height": 1080,
+            "ExposureTime": 3000.0,
+            "FrameRate": 200.0,
+            "Gain": 8.0
+        },
         "Base" : {
             "CameraType" : "DaHeng1280_1024",
             "LensType" : "Prime6mm",
@@ -83,7 +92,6 @@
             "ExposureTime" : 3000.0,
             "FrameRate" : 200.0,
             "Gain" : 24.0
-            
         },
         "Far" : {
             "CameraType" : "DaHeng720_540",
@@ -96,6 +104,15 @@
         "Switch" : {
             "BaseToFarDist" : 7.0,
             "FarToBaseDist" : 5.0
+        },
+        "Laptop":{
+            "CameraType": "Laptop_Integrated_Webcam",
+            "LensType": "Built_in_Lens",
+            "Width": 960,
+            "Height": 720,
+            "ExposureTime": 0,
+            "FrameRate": 30.0,
+            "Gain": 0
         }
     },
 
@@ -109,14 +126,14 @@
                 "InferWidth" : 640,
                 "InferHeight" : 480,
                 "LocateNum" : 4,
-                "ColorNum" : 0,
-                "ClassNum" : 7,
+                "ColorNum" : 2,
+                "ClassNum" : 12,
                 "BboxesNum" : 18900,
                 "ConfThresh" : 0.3,
                 "NMSThresh" : 0.02,
                 "NeedHist" : false,
-                "ClassMap" : [0, 1, 2, 3, 4, 5, 6],
-                "ColorMap" : [0, 1, 2, 3]
+                "ClassMap" : [1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0],
+                "ColorMap" : [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1]
             },
             "FPX" : {
                 "DirONNX" : "/etc/openrm/models/RP24.onnx",
@@ -153,8 +170,8 @@
             "EnemySplit" : 50
         },
         "Extend" : {
-            "ROIwidth" : 1.4,
-            "ROIheight" : 1.8,
+            "ROIwidth" : 1.1,
+            "ROIheight" : 1.2,
             "PointLineDist" : 32768.0,
             "PointRadiusRatio" : 0.15
         },

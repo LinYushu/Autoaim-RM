@@ -1,4 +1,22 @@
 { 
+    "Hik1440_1080" : {
+        "Prime8mm":{
+            "Intrinsic": {
+                "rows": 3,
+                "cols": 3,
+                "channel": 1,
+                "data": [ 2358.63545,     0,              618.1742 ,
+                          0,              2361.18354,     548.84575,
+                          0,              0     ,         1         ]
+            },
+            "Distortion": {
+                "rows": 5,
+                "cols": 1,
+                "channel": 1,
+                "data": [-0.040925, 0.103934, 0.003111, -0.009072, 0.000000]
+            }
+        }
+    },
     "DaHeng1280_1024" : {
         "Prime6mm" : {
             "Intrinsic" : {
@@ -178,6 +196,24 @@
             }
         }
 
+    },
+    "Laptop_Integrated_Webcam":{
+        "Built_in_Lens":{
+            "Intrinsic": {
+                "rows": 3,
+                "cols": 3,
+                "channel": 1,
+                "data":[
+                    1025.0,              0.0,            640.0,
+                    0.0,                 1025.0,         360.0,
+                    0.0,                 0.0,            1.0
+                ]},
+            "Distortion": {
+                "rows": 5,
+                "cols": 1,
+                "channel": 1,
+                "data":[0.0, 0.0, 0.0, 0.0, 0.0]}
+        }
     }
     
 }
