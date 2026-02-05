@@ -77,7 +77,7 @@ public:
     void imshow(std::shared_ptr<rm::Frame> frame_show);
     void imshow(std::shared_ptr<rm::Frame> frame_show, std::string& frame_msg);
 
-
+    ~Pipeline();
 
 private:
     std::shared_ptr<rm::Frame> preprocessor_register_;
@@ -115,6 +115,7 @@ private:
 
     cudaStream_t resize_stream_;
     cudaStream_t detect_stream_;
+    cudaEvent_t resize_complete_event_;
     nvinfer1::IExecutionContext* armor_context_;
     nvinfer1::IExecutionContext* rune_context_;
 

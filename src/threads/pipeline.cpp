@@ -129,7 +129,9 @@ void Pipeline::autoaim_rune() {
 
 void Pipeline::autoaim_combine() {
     bool cuda_status = rm::initCudaStream(&this->detect_stream_);
-    cuda_status = rm::initCudaStream(&this->resize_stream_);
+    cuda_status &= rm::initCudaStream(&this->resize_stream_);
+    cuda_status &= rm::initCudaEvent(&this->resize_complete_event_, cudaEventDisableTiming);
+
     if (!cuda_status) {
         rm::message("Failed to initialize CUDA stream", rm::MSG_ERROR);
         exit(-1);
@@ -217,4 +219,20 @@ void Pipeline::switch_rune_to_armor() {
     preprocessor_over_ = false;
     detector_over_ = false;
     armor_cv_.notify_all();
+}
+
+Pipeline::~Pipeline() {
+  if (this->resize_complete_event_) {
+    cudaEventDestroy(this->resize_complete_event_);
+    this->resize_complete_event_ = nullptr;
+  }
+  if (this->detect_stream_) {
+    cudaStreamDestroy(this->detect_stream_);
+    this->detect_stream_ = nullptr;
+  }
+  if (this->resize_stream_) {
+    cudaStreamDestroy(this->resize_stream_);
+    this->resize_stream_ = nullptr;
+  }
+  rm::message("Pipeline CUDA resources destroyed.", rm::MSG_OK);
 }

@@ -83,6 +83,8 @@ void Pipeline::preprocessor_baseline_thread(
             infer_height,
             (void*)resize_stream_
         );
+        cudaEventRecord(resize_complete_event_, resize_stream_);
+        cudaStreamWaitEvent(detect_stream_, resize_complete_event_, 0);
         detectEnqueue(
             armor_input_device_buffer_,
             armor_output_device_buffer_,
