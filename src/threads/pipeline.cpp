@@ -41,7 +41,11 @@ void Pipeline::autoaim_fourpoints() {
 
 void Pipeline::autoaim_baseline() {
     bool cuda_status = rm::initCudaStream(&this->detect_stream_);
-    cuda_status = rm::initCudaStream(&this->resize_stream_);
+    cuda_status &= rm::initCudaStream(&this->resize_stream_);
+    for (int i = 0; i < 2; i++) {
+        cuda_status &= rm::initCudaEvent(&this->resize_complete_event_[i], cudaEventDisableTiming);
+        cuda_status &= rm::initCudaEvent(&this->detect_complete_event_[i], cudaEventDisableTiming);
+    }
     if (!cuda_status) {
         rm::message("Failed to initialize CUDA stream", rm::MSG_ERROR);
         exit(-1);
@@ -130,7 +134,11 @@ void Pipeline::autoaim_rune() {
 void Pipeline::autoaim_combine() {
     bool cuda_status = rm::initCudaStream(&this->detect_stream_);
     cuda_status &= rm::initCudaStream(&this->resize_stream_);
-    cuda_status &= rm::initCudaEvent(&this->resize_complete_event_, cudaEventDisableTiming);
+    for (int i = 0; i < 2; i++)
+    {
+        cuda_status &= rm::initCudaEvent(&this->resize_complete_event_[i], cudaEventDisableTiming);
+        cuda_status &= rm::initCudaEvent(&this->detect_complete_event_[i], cudaEventDisableTiming);
+    }
 
     if (!cuda_status) {
         rm::message("Failed to initialize CUDA stream", rm::MSG_ERROR);
@@ -222,17 +230,35 @@ void Pipeline::switch_rune_to_armor() {
 }
 
 Pipeline::~Pipeline() {
-  if (this->resize_complete_event_) {
-    cudaEventDestroy(this->resize_complete_event_);
-    this->resize_complete_event_ = nullptr;
-  }
-  if (this->detect_stream_) {
-    cudaStreamDestroy(this->detect_stream_);
-    this->detect_stream_ = nullptr;
-  }
-  if (this->resize_stream_) {
-    cudaStreamDestroy(this->resize_stream_);
-    this->resize_stream_ = nullptr;
-  }
-  rm::message("Pipeline CUDA resources destroyed.", rm::MSG_OK);
+    for (int i = 0; i < 2; i++) {
+        if (this->resize_complete_event_[i]) {
+            cudaEventDestroy(this->resize_complete_event_[i]);
+            this->resize_complete_event_[i] = nullptr;
+        }
+        if (this->detect_complete_event_[i]) {
+            cudaEventDestroy(this->detect_complete_event_[i]);
+            this->detect_complete_event_[i] = nullptr;
+        }
+        if (this->armor_input_device_buffer_[i]) {
+            cudaFree(this->armor_input_device_buffer_[i]);
+            this->armor_input_device_buffer_[i] = nullptr;
+        }
+        if (this->armor_output_device_buffer_[i]) {
+            cudaFree(this->armor_output_device_buffer_[i]);
+            this->armor_output_device_buffer_[i] = nullptr;
+        }
+        if (this->armor_output_host_buffer_[i]) {
+            cudaFreeHost(this->armor_output_host_buffer_[i]);
+            this->armor_output_host_buffer_[i] = nullptr;
+        }
+    }
+    if (this->detect_stream_) {
+        cudaStreamDestroy(this->detect_stream_);
+        this->detect_stream_ = nullptr;
+    }
+    if (this->resize_stream_) {
+        cudaStreamDestroy(this->resize_stream_);
+        this->resize_stream_ = nullptr;
+    }
+    rm::message("Pipeline CUDA resources destroyed.", rm::MSG_OK);
 }

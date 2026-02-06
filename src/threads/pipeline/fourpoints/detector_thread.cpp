@@ -28,6 +28,7 @@ void Pipeline::detector_fourpoints_thread(
 
     std::mutex mutex;
     TimePoint tp0, tp1, tp2;
+    uint64_t frame_count = 0;
     rm::CycleQueue<double> delay_list(100);
     while (true) {
         if (!Data::armor_mode) {
@@ -44,18 +45,10 @@ void Pipeline::detector_fourpoints_thread(
 
 
         tp1 = getTime();
-
-        detectOutput(
-            armor_output_host_buffer_,
-            armor_output_device_buffer_,
-            &detect_stream_,
-            yolo_struct_size,
-            bboxes_num
-        );
-
-        if (yolo_type == "FPX") {
-            frame->yolo_list = yoloArmorNMS_FPX(
-                armor_output_host_buffer_,
+        int idx = frame_count % 2;
+        if (yolo_type == "V5") {
+            frame->yolo_list = yoloArmorNMS_V5(
+                armor_output_host_buffer_[idx],
                 bboxes_num,
                 class_num,
                 confidence_thresh,
@@ -67,7 +60,19 @@ void Pipeline::detector_fourpoints_thread(
             );
         } else if (yolo_type == "FP") {
             frame->yolo_list = yoloArmorNMS_FP(
-                armor_output_host_buffer_,
+                armor_output_host_buffer_[idx],
+                bboxes_num,
+                class_num,
+                confidence_thresh,
+                nms_thresh,
+                frame->width,
+                frame->height,
+                infer_width,
+                infer_height
+            );
+        } else if (yolo_type == "FPX") {
+            frame->yolo_list = yoloArmorNMS_FPX(
+                armor_output_host_buffer_[idx],
                 bboxes_num,
                 class_num,
                 confidence_thresh,
@@ -81,6 +86,8 @@ void Pipeline::detector_fourpoints_thread(
             rm::message("Invalid yolo type", rm::MSG_ERROR);
             exit(-1);
         }
+
+        frame_count++;
         
         if (frame->yolo_list.empty()) {
             if (Data::image_flag) imshow(frame);

@@ -115,13 +115,14 @@ private:
 
     cudaStream_t resize_stream_;
     cudaStream_t detect_stream_;
-    cudaEvent_t resize_complete_event_;
+    cudaEvent_t resize_complete_event_[2];
+    cudaEvent_t detect_complete_event_[2];
     nvinfer1::IExecutionContext* armor_context_;
     nvinfer1::IExecutionContext* rune_context_;
 
-    float* armor_input_device_buffer_ = nullptr;
-    float* armor_output_device_buffer_ = nullptr;
-    float* armor_output_host_buffer_ = nullptr;
+    float *armor_input_device_buffer_[2] = {nullptr, nullptr};
+    float *armor_output_device_buffer_[2] = {nullptr, nullptr};
+    float *armor_output_host_buffer_[2] = {nullptr, nullptr};
 
     float* rune_input_device_buffer_ = nullptr;
     float* rune_output_device_buffer_ = nullptr;

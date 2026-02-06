@@ -27,6 +27,7 @@ void Pipeline::detector_baseline_thread(
     size_t yolo_struct_size = sizeof(float) * static_cast<size_t>(locate_num + 1 + color_num + class_num);
     std::mutex mutex;
     TimePoint tp0, tp1, tp2;
+    uint64_t frame_count = 0;
     while (true) {
         if (!Data::armor_mode) {
             std::unique_lock<std::mutex> lock(mutex);
@@ -46,20 +47,11 @@ void Pipeline::detector_baseline_thread(
         flag_in = false;
         lock_in.unlock();
 
-
         tp1 = getTime();
-
-        detectOutput(
-            armor_output_host_buffer_,
-            armor_output_device_buffer_,
-            &detect_stream_,
-            yolo_struct_size,
-            bboxes_num
-        );
-        
+        int idx = frame_count % 2;
         if (yolo_type == "V5") {
             frame->yolo_list = yoloArmorNMS_V5(
-                armor_output_host_buffer_,
+                armor_output_host_buffer_[idx],
                 bboxes_num,
                 class_num,
                 confidence_thresh,
@@ -71,7 +63,7 @@ void Pipeline::detector_baseline_thread(
             );
         } else if (yolo_type == "FP") {
             frame->yolo_list = yoloArmorNMS_FP(
-                armor_output_host_buffer_,
+                armor_output_host_buffer_[idx],
                 bboxes_num,
                 class_num,
                 confidence_thresh,
@@ -83,7 +75,7 @@ void Pipeline::detector_baseline_thread(
             );
         } else if (yolo_type == "FPX") {
             frame->yolo_list = yoloArmorNMS_FPX(
-                armor_output_host_buffer_,
+                armor_output_host_buffer_[idx],
                 bboxes_num,
                 class_num,
                 confidence_thresh,
@@ -97,6 +89,8 @@ void Pipeline::detector_baseline_thread(
             rm::message("Invalid yolo type", rm::MSG_ERROR);
             exit(-1);
         }
+
+        frame_count++;
         
         if (frame->yolo_list.empty()) {
             if (Data::image_flag) imshow(frame);
