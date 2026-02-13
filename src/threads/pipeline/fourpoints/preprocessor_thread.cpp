@@ -36,26 +36,22 @@ void Pipeline::preprocessor_fourpoints_thread(
 
     size_t yolo_struct_size = sizeof(float) * static_cast<size_t>(locate_num + 1 + color_num + class_num);
     
-    for (int i = 0; i < 2; i++) {
-        mallocYoloDetectBuffer(
-            &armor_input_device_buffer_[i], 
-            &armor_output_device_buffer_[i], 
-            &armor_output_host_buffer_[i], 
-            infer_width, 
-            infer_height, 
-            yolo_struct_size,
-            bboxes_num);
-    }
+    mallocYoloDetectBuffer(
+        &armor_input_device_buffer_, 
+        &armor_output_device_buffer_, 
+        &armor_output_host_buffer_, 
+        infer_width, 
+        infer_height, 
+        yolo_struct_size,
+        bboxes_num);
 
     std::mutex mutex;
     TimePoint frame_wait, flag_wait;
     TimePoint tp0, tp1, tp2;
-    uint64_t frame_count = 0;
     while(true) {
-      int idx = frame_count % 2;
-      if (!Data::armor_mode) {
-        std::unique_lock<std::mutex> lock(mutex);
-        armor_cv_.wait(lock, [this] { return Data::armor_mode; });
+        if (!Data::armor_mode) {
+            std::unique_lock<std::mutex> lock(mutex);
+            armor_cv_.wait(lock, [this]{return Data::armor_mode;});
         }
         
         Camera* camera = Data::camera[Data::camera_index];
@@ -73,40 +69,27 @@ void Pipeline::preprocessor_fourpoints_thread(
             }
         }
 
-        cudaStreamWaitEvent(resize_stream_, detect_complete_event_[idx], 0);
         memcpyYoloCameraBuffer(
-            frame->image->data,
+            frame->image->data, 
             camera->rgb_host_buffer,
             camera->rgb_device_buffer,
             frame->width,
             frame->height);
-        
         resize(
             camera->rgb_device_buffer,
             frame->width,
             frame->height,
-            armor_input_device_buffer_[idx],
+            armor_input_device_buffer_,
             infer_width,
             infer_height,
             (void*)resize_stream_
         );
-        cudaEventRecord(resize_complete_event_[idx], resize_stream_);
-        cudaStreamWaitEvent(detect_stream_, resize_complete_event_[idx], 0);
         detectEnqueue(
-            armor_input_device_buffer_[idx],
-            armor_output_device_buffer_[idx],
+            armor_input_device_buffer_,
+            armor_output_device_buffer_,
             &armor_context_,
             &detect_stream_
         );
-        detectOutput(
-            armor_output_host_buffer_[idx],
-            armor_output_device_buffer_[idx],
-            &detect_stream_,
-            yolo_struct_size,
-            bboxes_num
-        );
-        cudaEventRecord(detect_complete_event_[idx], detect_stream_);
-
 
         if (Data::record_mode) { record(frame); }
 
@@ -124,6 +107,5 @@ void Pipeline::preprocessor_fourpoints_thread(
         std::unique_lock<std::mutex> lock_out(mutex_out);
         frame_out = frame;
         flag_out = true;
-        frame_count++;
     }
 }
