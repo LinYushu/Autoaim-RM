@@ -25,6 +25,12 @@ void Pipeline::detector_baseline_thread(
     double nms_thresh        = (*param)["Model"]["YoloArmor"][yolo_type]["NMSThresh"];
 
     size_t yolo_struct_size = sizeof(float) * static_cast<size_t>(locate_num + 1 + color_num + class_num);
+
+    // 计算偏移量
+    size_t output_step_bytes = (yolo_struct_size * bboxes_num + sizeof(float) + 255) & ~255;
+    size_t output_step_floats = output_step_bytes / sizeof(float);
+    int local_buf_idx = 0;
+
     std::mutex mutex;
     TimePoint tp0, tp1, tp2;
     uint64_t frame_count = 0;
@@ -48,10 +54,25 @@ void Pipeline::detector_baseline_thread(
         lock_in.unlock();
 
         tp1 = getTime();
-        int idx = frame_count % 2;
+
+        float* curr_output_dev = armor_output_device_buffer_ + (local_buf_idx * output_step_floats);
+        float* curr_output_host = armor_output_host_buffer_ + (local_buf_idx * output_step_floats);
+
+        detectOutput(
+            curr_output_host,
+            curr_output_dev,
+            &detect_stream_,
+            yolo_struct_size,
+            bboxes_num,
+            1
+        );
+
+        cudaEventRecord(detect_complete_event_[local_buf_idx], detect_stream_);
+        cudaEventSynchronize(detect_complete_event_[local_buf_idx]);
+
         if (yolo_type == "V5") {
             frame->yolo_list = yoloArmorNMS_V5(
-                armor_output_host_buffer_[idx],
+                curr_output_host,
                 bboxes_num,
                 class_num,
                 confidence_thresh,
@@ -63,7 +84,7 @@ void Pipeline::detector_baseline_thread(
             );
         } else if (yolo_type == "FP") {
             frame->yolo_list = yoloArmorNMS_FP(
-                armor_output_host_buffer_[idx],
+                curr_output_host,
                 bboxes_num,
                 class_num,
                 confidence_thresh,
@@ -75,7 +96,7 @@ void Pipeline::detector_baseline_thread(
             );
         } else if (yolo_type == "FPX") {
             frame->yolo_list = yoloArmorNMS_FPX(
-                armor_output_host_buffer_[idx],
+                curr_output_host,
                 bboxes_num,
                 class_num,
                 confidence_thresh,
@@ -90,7 +111,7 @@ void Pipeline::detector_baseline_thread(
             exit(-1);
         }
 
-        frame_count++;
+        local_buf_idx = 1 - local_buf_idx;
         
         if (frame->yolo_list.empty()) {
             if (Data::image_flag) imshow(frame);

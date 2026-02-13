@@ -239,18 +239,18 @@ Pipeline::~Pipeline() {
             cudaEventDestroy(this->detect_complete_event_[i]);
             this->detect_complete_event_[i] = nullptr;
         }
-        if (this->armor_input_device_buffer_[i]) {
-            cudaFree(this->armor_input_device_buffer_[i]);
-            this->armor_input_device_buffer_[i] = nullptr;
-        }
-        if (this->armor_output_device_buffer_[i]) {
-            cudaFree(this->armor_output_device_buffer_[i]);
-            this->armor_output_device_buffer_[i] = nullptr;
-        }
-        if (this->armor_output_host_buffer_[i]) {
-            cudaFreeHost(this->armor_output_host_buffer_[i]);
-            this->armor_output_host_buffer_[i] = nullptr;
-        }
+    }
+    if (this->armor_input_device_buffer_) {
+        cudaFree(this->armor_input_device_buffer_);
+        this->armor_input_device_buffer_ = nullptr;
+    }
+    if (this->armor_output_device_buffer_) {
+        cudaFree(this->armor_output_device_buffer_);
+        this->armor_output_device_buffer_ = nullptr;
+    }
+    if (this->armor_output_host_buffer_) {
+        cudaFreeHost(this->armor_output_host_buffer_);
+        this->armor_output_host_buffer_ = nullptr;
     }
     if (this->detect_stream_) {
         cudaStreamDestroy(this->detect_stream_);

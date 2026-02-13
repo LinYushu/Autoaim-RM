@@ -17,7 +17,6 @@ void Pipeline::preprocessor_baseline_thread(
     std::string onnx_file   = (*param)["Model"]["YoloArmor"][yolo_type]["DirONNX"];
     std::string engine_file = (*param)["Model"]["YoloArmor"][yolo_type]["DirEngine"];
     
-
     int  infer_width     = (*param)["Model"]["YoloArmor"][yolo_type]["InferWidth"];
     int  infer_height    = (*param)["Model"]["YoloArmor"][yolo_type]["InferHeight"];
     int  class_num       = (*param)["Model"]["YoloArmor"][yolo_type]["ClassNum"];
@@ -36,22 +35,30 @@ void Pipeline::preprocessor_baseline_thread(
     }
 
     size_t yolo_struct_size = sizeof(float) * static_cast<size_t>(locate_num + 1 + color_num + class_num);
-    for (int i = 0; i < 2; i++) {
     mallocYoloDetectBuffer(
-            &armor_input_device_buffer_[i], 
-            &armor_output_device_buffer_[i], 
-            &armor_output_host_buffer_[i], 
+        &armor_input_device_buffer_, 
+        &armor_output_device_buffer_, 
+        &armor_output_host_buffer_, 
         infer_width, 
         infer_height, 
         yolo_struct_size,
-        bboxes_num);
-    }
+        bboxes_num,
+        2
+    );
+
+    // 计算偏移量 (Offset)
+    size_t input_step_floats = infer_width * infer_height * 3; // float数量
+    size_t output_step_bytes = (yolo_struct_size * bboxes_num + sizeof(float) + 255) & ~255;
+    size_t output_step_floats = output_step_bytes / sizeof(float);
+
+    buffer_idx_ = 0;
+    first_run_ = true;
+
     std::mutex mutex;
     TimePoint frame_wait, flag_wait;
     TimePoint tp0, tp1, tp2;
-    uint64_t frame_count = 0;
         while(true) {
-        int idx = frame_count % 2;
+
         if (!Data::armor_mode) {
             std::unique_lock<std::mutex> lock(mutex);
             armor_cv_.wait(lock, [this]{return Data::armor_mode;});
@@ -70,39 +77,40 @@ void Pipeline::preprocessor_baseline_thread(
             }
         }
 
-        cudaStreamWaitEvent(resize_stream_, detect_complete_event_[idx], 0);
+        if (!first_run_) {
+            cudaStreamWaitEvent(resize_stream_, detect_complete_event_[buffer_idx_], 0);
+        }
+
         memcpyYoloCameraBuffer(
             frame->image->data,
             camera->rgb_host_buffer,
             camera->rgb_device_buffer,
             frame->width,
-            frame->height);
+            frame->height,
+            &resize_stream_
+        );
+        
+        // 计算当前帧的显存指针偏移
+        float* curr_input_dev = armor_input_device_buffer_ + (buffer_idx_ * input_step_floats);
+        float* curr_output_dev = armor_output_device_buffer_ + (buffer_idx_ * output_step_floats);
         
         resize(
             camera->rgb_device_buffer,
             frame->width,
             frame->height,
-            armor_input_device_buffer_[idx],
+            curr_input_dev,
             infer_width,
             infer_height,
             (void*)resize_stream_
         );
-        cudaEventRecord(resize_complete_event_[idx], resize_stream_);
-        cudaStreamWaitEvent(detect_stream_, resize_complete_event_[idx], 0);
+        cudaEventRecord(resize_complete_event_[buffer_idx_], resize_stream_);
+        cudaStreamWaitEvent(detect_stream_, resize_complete_event_[buffer_idx_], 0);
         detectEnqueue(
-            armor_input_device_buffer_[idx],
-            armor_output_device_buffer_[idx],
+            curr_input_dev,
+            curr_output_dev,
             &armor_context_,
             &detect_stream_
         );
-        detectOutput(
-            armor_output_host_buffer_[idx],
-            armor_output_device_buffer_[idx],
-            &detect_stream_,
-            yolo_struct_size,
-            bboxes_num
-        );
-        cudaEventRecord(detect_complete_event_[idx], detect_stream_);
 
         if (Data::record_mode) { record(frame); }
 
@@ -116,10 +124,12 @@ void Pipeline::preprocessor_baseline_thread(
                 exit(-1);
             }
         }
+
+        buffer_idx_ = 1 - buffer_idx_;
+        first_run_ = false;
         
         std::unique_lock<std::mutex> lock_out(mutex_out);
         frame_out = frame;
         flag_out = true;
-        frame_count++;
     }
 }
