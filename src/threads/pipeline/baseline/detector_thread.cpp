@@ -33,7 +33,6 @@ void Pipeline::detector_baseline_thread(
 
     std::mutex mutex;
     TimePoint tp0, tp1, tp2;
-    uint64_t frame_count = 0;
     while (true) {
         if (!Data::armor_mode) {
             std::unique_lock<std::mutex> lock(mutex);
@@ -112,7 +111,7 @@ void Pipeline::detector_baseline_thread(
         }
 
         local_buf_idx = 1 - local_buf_idx;
-        
+
         if (frame->yolo_list.empty()) {
             if (Data::image_flag) imshow(frame);
             continue;

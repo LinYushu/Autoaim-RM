@@ -16,7 +16,7 @@ void Pipeline::preprocessor_baseline_thread(
     std::string yolo_type   = (*param)["Model"]["YoloArmor"]["Type"];
     std::string onnx_file   = (*param)["Model"]["YoloArmor"][yolo_type]["DirONNX"];
     std::string engine_file = (*param)["Model"]["YoloArmor"][yolo_type]["DirEngine"];
-    
+
     int  infer_width     = (*param)["Model"]["YoloArmor"][yolo_type]["InferWidth"];
     int  infer_height    = (*param)["Model"]["YoloArmor"][yolo_type]["InferHeight"];
     int  class_num       = (*param)["Model"]["YoloArmor"][yolo_type]["ClassNum"];
@@ -127,7 +127,7 @@ void Pipeline::preprocessor_baseline_thread(
 
         buffer_idx_ = 1 - buffer_idx_;
         first_run_ = false;
-        
+
         std::unique_lock<std::mutex> lock_out(mutex_out);
         frame_out = frame;
         flag_out = true;

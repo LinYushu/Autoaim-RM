@@ -4,7 +4,7 @@
 #define CAM_TYPE_HIK    1
 #define CAM_TYPE_DAHENG 2
 #define CAM_TYPE_UVC    3
-#define USE_CAMERA  CAM_TYPE_DAHENG
+#define USE_CAMERA  CAM_TYPE_HIK
 
 #include <opencv2/opencv.hpp>
 #include <openrm.h>

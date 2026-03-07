@@ -76,7 +76,7 @@
         "VideoSaveDir" : "/home/xdxg/grad_project_workspace/TJURM-2024/data/video",
         "DebugSaveDir" : "/home/xdxg/grad_project_workspace/TJURM-2024/data/debug",
         "Hik":{
-            "CameraType": "HikC1440_1080",
+            "CameraType": "Hik1440_1080",
             "LensType": "Prime8mm",
             "Width": 1440,
             "Height": 1080,

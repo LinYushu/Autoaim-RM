@@ -57,9 +57,74 @@ bool init_camera() {
     return init_cam_flag;
 }
 
-bool init_Hik(){
-    // TODO 初始化海康相机函数待写
-    return false;
+bool init_Hik() {
+    auto param = Param::get_instance();
+    // auto control = Control::get_instance(); // 如果后续不需要用到可不声明
+
+    // 1. 获取相机参数矩阵 JSON
+    nlohmann::json camlens;
+    std::string camlen_path = (*param)["Camera"]["CamLensDir"];
+    try {
+        std::ifstream camlens_json(camlen_path);
+        camlens_json >> camlens;
+        camlens_json.close();
+    } catch (std::exception& e) {
+        std::string err_str = "Failed to load CamLens json: " + std::string(e.what());
+        rm::message(err_str, rm::MSG_ERROR);
+        return false;
+    }
+
+    // 2. 获取海康相机数量
+    int camera_num;
+    bool flag_camera = rm::getHikCameraNum(camera_num);
+    Data::camera.clear();
+    Data::camera.resize(camera_num + 1, nullptr);
+    
+    if (!flag_camera || camera_num < 1) {
+        rm::message("Failed to get Hik camera number or no camera found", rm::MSG_ERROR);
+        return false;
+    }
+    rm::message("get Hik camera number " + std::to_string(camera_num), rm::MSG_NOTE);
+
+    // 3. 初始化单相机（根据需求仅处理单个海康相机）
+    Data::camera_index = 1;
+    Data::camera_base = 1;
+    Data::camera_far = 1;
+
+    // 读取参数配置
+    double exp = (*param)["Camera"]["Hik"]["ExposureTime"];
+    double gain = (*param)["Camera"]["Hik"]["Gain"];
+    double rate = (*param)["Camera"]["Hik"]["FrameRate"];
+    std::string camera_type = (*param)["Camera"]["Hik"]["CameraType"];
+    std::string lens_type = (*param)["Camera"]["Hik"]["LensType"];
+    std::vector<double> camera_offset = (*param)["Car"]["CameraOffset"]["Base"];
+
+    Data::camera[1] = new rm::Camera();
+    
+    // 打开海康相机
+    // 注意：海康 SDK 枚举设备列表 pDeviceInfo 的索引是从 0 开始的，所以传入 0
+    flag_camera = rm::openHik(
+        Data::camera[1], 0, &Data::yaw, &Data::pitch, &Data::roll,
+        false, exp, gain, rate);
+
+    if (!flag_camera) {
+        rm::message("Failed to open Hik camera", rm::MSG_ERROR);
+        return false;
+    }
+
+    // 4. 加载内参、畸变系数
+    Param::from_json(camlens[camera_type][lens_type]["Intrinsic"], Data::camera[1]->intrinsic_matrix);
+    Param::from_json(camlens[camera_type][lens_type]["Distortion"], Data::camera[1]->distortion_coeffs);
+    
+    // 5. 计算云台到相机的 TF 变换
+    rm::tf_rotate_pnp2head(Data::camera[1]->Rotate_pnp2head, camera_offset[3], camera_offset[4], 0.0);
+    rm::tf_trans_pnp2head(Data::camera[1]->Trans_pnp2head, camera_offset[0], camera_offset[1], camera_offset[2], camera_offset[3], camera_offset[4], 0.0);
+    
+    // 6. 为 YOLO 等算法分配内存和显存
+    // rm::openHik 内部已经成功获取了宽和高，直接使用即可
+    rm::mallocYoloCameraBuffer(&Data::camera[1]->rgb_host_buffer, &Data::camera[1]->rgb_device_buffer, Data::camera[1]->width, Data::camera[1]->height);
+
+    return true;
 }
 
 bool init_UVC() {
@@ -263,7 +328,11 @@ bool deinit_camera() {
 
         delete Data::camera[i];
         Data::camera[i] = nullptr;
-        // rm::closeDaHeng();
+        #if USE_CAMERA == CAM_TYPE_HIK
+        rm::closeHik();
+        #elif USE_CAMERA == CAM_TYPE_DAHENG
+            rm::closeDaHeng();
+        #endif
     }
     rm::message("Camera deinit success", rm::MSG_WARNING);
     return true;
