@@ -57,8 +57,8 @@ void Pipeline::preprocessor_baseline_thread(
     std::mutex mutex;
     TimePoint frame_wait, flag_wait;
     TimePoint tp0, tp1, tp2;
-        while(true) {
-
+    while(true) {
+        // rm::message("Pre " + std::to_string(Data::enemy_color));
         if (!Data::armor_mode) {
             std::unique_lock<std::mutex> lock(mutex);
             armor_cv_.wait(lock, [this]{return Data::armor_mode;});
@@ -115,7 +115,10 @@ void Pipeline::preprocessor_baseline_thread(
         if (Data::record_mode) { record(frame); }
 
         tp2 = getTime();
-        if (Data::pipeline_delay_flag) rm::message("preprocess", getDoubleOfS(tp1, tp2) * 1000);
+        if (Data::pipeline_delay_flag) {
+          rm::message("preprocess", getDoubleOfS(tp1, tp2) * 1000);
+        //   rm::message("Pre: " + std::to_string(getDoubleOfS(tp1, tp2) * 1000) + "ms");
+        }
 
         flag_wait = getTime();
         while(flag_out) {

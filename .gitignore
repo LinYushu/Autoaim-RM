@@ -1,0 +1,7 @@
+﻿/build
+/config
+/data/debug/*
+/data/speed/*
+/data/video/*
+/data/models/*
+/data/uniconfig/*

@@ -34,6 +34,7 @@ void Pipeline::detector_baseline_thread(
     std::mutex mutex;
     TimePoint tp0, tp1, tp2;
     while (true) {
+        // rm::message("Det " + std::to_string(Data::enemy_color));
         if (!Data::armor_mode) {
             std::unique_lock<std::mutex> lock(mutex);
             armor_cv_.wait(lock, [this]{return Data::armor_mode;});
@@ -118,8 +119,10 @@ void Pipeline::detector_baseline_thread(
         } 
 
         tp2 = getTime();
-        if (Data::pipeline_delay_flag) rm::message("detect time", getDoubleOfS(tp1, tp2) * 1000);
-
+        if (Data::pipeline_delay_flag) {
+          rm::message("preprocess", getDoubleOfS(tp1, tp2) * 1000);
+        //   rm::message("Det: " + std::to_string(getDoubleOfS(tp1, tp2) * 1000) + "ms");
+        }
 
         std::unique_lock<std::mutex> lock_out(mutex_out);
         frame_out = frame;

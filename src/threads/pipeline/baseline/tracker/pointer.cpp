@@ -100,6 +100,8 @@ bool Pipeline::pointer(std::shared_ptr<rm::Frame> frame) {
         rm::Armor armor;
         armor.id = (rm::ArmorID)(armor_class_map[yolo_rect.class_id]);
         armor.color = (rm::ArmorColor)(armor_color_map[yolo_rect.class_id]);
+        rm::message("YOLO ID: " + std::to_string(armor.id));
+        rm::message("YOLO color: " + std::to_string(armor.color));
         setArmorExtendRectIOU(armor, yolo_rect.box, frame->width, frame->height, roi_extend_w, roi_extend_h);
         armor.size = ARMOR_SIZE_SMALL_ARMOR;
         setArmorRectCenter(armor);

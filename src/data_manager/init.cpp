@@ -100,7 +100,8 @@ bool init_Hik() {
     std::vector<double> camera_offset = (*param)["Car"]["CameraOffset"]["Base"];
 
     Data::camera[1] = new rm::Camera();
-    
+    Data::camera[1]->camera_id = 1;
+
     // 打开海康相机
     // 注意：海康 SDK 枚举设备列表 pDeviceInfo 的索引是从 0 开始的，所以传入 0
     flag_camera = rm::openHik(

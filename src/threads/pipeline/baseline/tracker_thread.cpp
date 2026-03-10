@@ -51,13 +51,18 @@ void Pipeline::tracker_baseline_thread(
         if (track_flag) track_flag = updater(frame);
         tp2 = getTime();
 
-        if (Data::pipeline_delay_flag) rm::message("tracker time", getDoubleOfS(tp1, tp2) * 1000);
+        if (Data::pipeline_delay_flag) {
+          rm::message("preprocess", getDoubleOfS(tp1, tp2) * 1000);
+          rm::message(
+              "Tra: " + std::to_string(getDoubleOfS(tp1, tp2) * 1000) + "ms");
+        }
         if (track_flag) delay_list.push(getDoubleOfS(tp0, tp2));
 
         tp0 = tp2;
         double fps = 1.0 / delay_list.getAvg();
         rm::message("fps", fps);
-        
+        rm::message("fps: " + std::to_string(fps) + "\n");
+
         if (Data::image_flag) {
             if (Data::ui_flag) UI(frame);
             imshow(frame);
