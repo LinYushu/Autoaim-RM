@@ -29,6 +29,7 @@ void Pipeline::tracker_baseline_thread(
 
     rm::CycleQueue<double> delay_list(100);
     TimePoint tp0, tp1, tp2;
+    tp0 = getTime();
 
     std::mutex mutex;
     while (true) {
@@ -52,7 +53,7 @@ void Pipeline::tracker_baseline_thread(
         tp2 = getTime();
 
         if (Data::pipeline_delay_flag) {
-          rm::message("preprocess", getDoubleOfS(tp1, tp2) * 1000);
+          rm::message("track", getDoubleOfS(tp1, tp2) * 1000);
           rm::message(
               "Tra: " + std::to_string(getDoubleOfS(tp1, tp2) * 1000) + "ms");
         }

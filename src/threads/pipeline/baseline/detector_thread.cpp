@@ -120,8 +120,8 @@ void Pipeline::detector_baseline_thread(
 
         tp2 = getTime();
         if (Data::pipeline_delay_flag) {
-          rm::message("preprocess", getDoubleOfS(tp1, tp2) * 1000);
-        //   rm::message("Det: " + std::to_string(getDoubleOfS(tp1, tp2) * 1000) + "ms");
+          rm::message("detect", getDoubleOfS(tp1, tp2) * 1000);
+          rm::message("Det: " + std::to_string(getDoubleOfS(tp1, tp2) * 1000) + "ms");
         }
 
         std::unique_lock<std::mutex> lock_out(mutex_out);

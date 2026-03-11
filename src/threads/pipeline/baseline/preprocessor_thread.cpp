@@ -67,7 +67,7 @@ void Pipeline::preprocessor_baseline_thread(
         Camera* camera = Data::camera[Data::camera_index];
         std::shared_ptr<rm::Frame> frame = camera->buffer->pop();
 
-        frame_wait = tp1 = getTime();
+        frame_wait = getTime();
         while(frame == nullptr) {
             frame = camera->buffer->pop();
             double delay = getDoubleOfS(frame_wait, getTime());
@@ -76,6 +76,8 @@ void Pipeline::preprocessor_baseline_thread(
                 exit(-1);
             }
         }
+
+        tp1 = getTime();
 
         if (!first_run_) {
             cudaStreamWaitEvent(resize_stream_, detect_complete_event_[buffer_idx_], 0);
@@ -117,7 +119,7 @@ void Pipeline::preprocessor_baseline_thread(
         tp2 = getTime();
         if (Data::pipeline_delay_flag) {
           rm::message("preprocess", getDoubleOfS(tp1, tp2) * 1000);
-        //   rm::message("Pre: " + std::to_string(getDoubleOfS(tp1, tp2) * 1000) + "ms");
+          rm::message("Pre: " + std::to_string(getDoubleOfS(tp1, tp2) * 1000) + "ms");
         }
 
         flag_wait = getTime();
