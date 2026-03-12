@@ -1,5 +1,6 @@
 #include "threads/pipeline.h"
 #include "threads/control.h"
+#include "nvtx3/nvtx3.hpp"
 
 using namespace rm;
 
@@ -47,21 +48,24 @@ void Pipeline::tracker_baseline_thread(
 
         tp1 = getTime();
         bool track_flag = true;
+        {
+        nvtx3::scoped_range marker("Tra");
         if (track_flag) track_flag = pointer(frame);
         if (track_flag) track_flag = locater(frame);
         if (track_flag) track_flag = updater(frame);
+        }
         tp2 = getTime();
 
         if (Data::pipeline_delay_flag) {
           rm::message("track", getDoubleOfS(tp1, tp2) * 1000);
-          rm::message("Tra: " + std::to_string(getDoubleOfS(tp1, tp2) * 1000) + "ms");
+        //   rm::message("Tra: " + std::to_string(getDoubleOfS(tp1, tp2) * 1000) + "ms");
         }
         if (track_flag) delay_list.push(getDoubleOfS(tp0, tp2));
 
         tp0 = tp2;
         double fps = 1.0 / delay_list.getAvg();
         rm::message("fps", fps);
-        rm::message("fps: " + std::to_string(fps) + "\n");
+        // rm::message("fps: " + std::to_string(fps) + "\n");
 
         if (Data::image_flag) {
             if (Data::ui_flag) UI(frame);

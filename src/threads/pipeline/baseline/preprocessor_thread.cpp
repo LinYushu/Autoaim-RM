@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <iostream>
 #include <openrm/cudatools.h>
+#include "nvtx3/nvtx3.hpp"
 
 using namespace rm;
 using namespace nvinfer1;
@@ -79,6 +80,8 @@ void Pipeline::preprocessor_baseline_thread(
 
         tp1 = getTime();
 
+        {
+        nvtx3::scoped_range marker("Pre");
         if (!first_run_) {
             cudaStreamWaitEvent(resize_stream_, detect_complete_event_[buffer_idx_], 0);
         }
@@ -115,11 +118,12 @@ void Pipeline::preprocessor_baseline_thread(
         );
 
         if (Data::record_mode) { record(frame); }
+        }
 
         tp2 = getTime();
         if (Data::pipeline_delay_flag) {
           rm::message("preprocess", getDoubleOfS(tp1, tp2) * 1000);
-          rm::message("Pre: " + std::to_string(getDoubleOfS(tp1, tp2) * 1000) + "ms");
+        //   rm::message("Pre: " + std::to_string(getDoubleOfS(tp1, tp2) * 1000) + "ms");
         }
 
         flag_wait = getTime();

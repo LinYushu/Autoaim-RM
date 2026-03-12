@@ -2,6 +2,8 @@
 #include <unistd.h>
 #include <iostream>
 #include <openrm/cudatools.h>
+#include "nvtx3/nvtx3.hpp"
+
 using namespace rm;
 using namespace nvinfer1;
 using namespace nvonnxparser;
@@ -54,7 +56,8 @@ void Pipeline::detector_baseline_thread(
         lock_in.unlock();
 
         tp1 = getTime();
-
+        {
+        nvtx3::scoped_range marker("Det");
         float* curr_output_dev = armor_output_device_buffer_ + (local_buf_idx * output_step_floats);
         float* curr_output_host = armor_output_host_buffer_ + (local_buf_idx * output_step_floats);
 
@@ -116,12 +119,13 @@ void Pipeline::detector_baseline_thread(
         if (frame->yolo_list.empty()) {
             if (Data::image_flag) imshow(frame);
             continue;
-        } 
+        }
+        }
 
         tp2 = getTime();
         if (Data::pipeline_delay_flag) {
           rm::message("detect", getDoubleOfS(tp1, tp2) * 1000);
-          rm::message("Det: " + std::to_string(getDoubleOfS(tp1, tp2) * 1000) + "ms");
+        //   rm::message("Det: " + std::to_string(getDoubleOfS(tp1, tp2) * 1000) + "ms");
         }
 
         std::unique_lock<std::mutex> lock_out(mutex_out);
