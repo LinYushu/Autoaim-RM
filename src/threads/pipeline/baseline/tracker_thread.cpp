@@ -54,8 +54,7 @@ void Pipeline::tracker_baseline_thread(
 
         if (Data::pipeline_delay_flag) {
           rm::message("track", getDoubleOfS(tp1, tp2) * 1000);
-          rm::message(
-              "Tra: " + std::to_string(getDoubleOfS(tp1, tp2) * 1000) + "ms");
+          rm::message("Tra: " + std::to_string(getDoubleOfS(tp1, tp2) * 1000) + "ms");
         }
         if (track_flag) delay_list.push(getDoubleOfS(tp0, tp2));
 

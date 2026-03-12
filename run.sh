@@ -100,6 +100,24 @@ make -j "$max_threads"
 echo -e "${yellow}\n<--- Total Lines --->${reset}"
 echo -e "${blue}        $total${reset}"
 
+function restore_performance() {
+    echo -e "${yellow}\n<--- Exiting & Restoring System Settings --->${reset}"
+    sudo jetson_clocks --restore
+    sudo systemctl restart nvfancontrol
+    echo -e "${blue}System performance restored to normal.${reset}"
+}
+
+trap restore_performance EXIT
+
+echo -e "${yellow}\n<--- Enabling Max Performance Mode --->${reset}"
+sudo nvpmodel -m 8
+
+if [ ! -f /root/.jetsonclocks_conf.txt ]; then
+    echo -e "${blue}Storing default jetson_clocks state...${reset}"
+    sudo jetson_clocks --store
+fi
+
+sudo jetson_clocks --fan
 
 echo -e "${yellow}\n<--- Run Code --->${reset}"
 sudo rm /usr/local/bin/TJURM-2024
