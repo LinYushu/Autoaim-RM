@@ -97,7 +97,6 @@ void Pipeline::preprocessor_baseline_thread(
         
         // 计算当前帧的显存指针偏移
         float* curr_input_dev = armor_input_device_buffer_ + (buffer_idx_ * input_step_floats);
-        float* curr_output_dev = armor_output_device_buffer_ + (buffer_idx_ * output_step_floats);
         
         resize(
             camera->rgb_device_buffer,
@@ -109,13 +108,6 @@ void Pipeline::preprocessor_baseline_thread(
             (void*)resize_stream_
         );
         cudaEventRecord(resize_complete_event_[buffer_idx_], resize_stream_);
-        cudaStreamWaitEvent(detect_stream_, resize_complete_event_[buffer_idx_], 0);
-        detectEnqueue(
-            curr_input_dev,
-            curr_output_dev,
-            &armor_context_,
-            &detect_stream_
-        );
 
         if (Data::record_mode) { record(frame); }
         }

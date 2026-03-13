@@ -29,9 +29,14 @@ void Pipeline::detector_baseline_thread(
     size_t yolo_struct_size = sizeof(float) * static_cast<size_t>(locate_num + 1 + color_num + class_num);
 
     // 计算偏移量
+    size_t input_step_floats = infer_width * infer_height * 3;
     size_t output_step_bytes = (yolo_struct_size * bboxes_num + sizeof(float) + 255) & ~255;
     size_t output_step_floats = output_step_bytes / sizeof(float);
     int local_buf_idx = 0;
+
+    cudaGraph_t graph[2];
+    cudaGraphExec_t graphExec[2];
+    bool graph_created[2] = {false, false};
 
     std::mutex mutex;
     TimePoint tp0, tp1, tp2;
@@ -58,17 +63,38 @@ void Pipeline::detector_baseline_thread(
         tp1 = getTime();
         {
         nvtx3::scoped_range marker("Det");
+        float *curr_input_dev = armor_input_device_buffer_ + (local_buf_idx * input_step_floats);
         float* curr_output_dev = armor_output_device_buffer_ + (local_buf_idx * output_step_floats);
         float* curr_output_host = armor_output_host_buffer_ + (local_buf_idx * output_step_floats);
 
-        detectOutput(
-            curr_output_host,
-            curr_output_dev,
-            &detect_stream_,
-            yolo_struct_size,
-            bboxes_num,
-            1
-        );
+        cudaStreamWaitEvent(detect_stream_, resize_complete_event_[local_buf_idx], 0);
+
+        if (!graph_created[local_buf_idx]) {
+            cudaStreamBeginCapture(detect_stream_, cudaStreamCaptureModeGlobal);
+
+            detectEnqueue(
+                curr_input_dev,
+                curr_output_dev,
+                &armor_context_,
+                &detect_stream_
+            );
+            detectOutput(
+                curr_output_host,
+                curr_output_dev,
+                &detect_stream_,
+                yolo_struct_size,
+                bboxes_num,
+                1
+            );
+            // 结束录制，实例化执行图
+            cudaStreamEndCapture(detect_stream_, &graph[local_buf_idx]);
+            cudaGraphInstantiate(&graphExec[local_buf_idx], graph[local_buf_idx], NULL, NULL, 0);
+            graph_created[local_buf_idx] = true;
+            rm::message("CUDA Graph created for buffer " + std::to_string(local_buf_idx), rm::MSG_OK);
+        }
+        
+        // 发射打包好的图！(这只要 1 次 API 调用)
+        cudaGraphLaunch(graphExec[local_buf_idx], detect_stream_);
 
         cudaEventRecord(detect_complete_event_[local_buf_idx], detect_stream_);
         cudaEventSynchronize(detect_complete_event_[local_buf_idx]);

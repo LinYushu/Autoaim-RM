@@ -1,16 +1,17 @@
 cmake_minimum_required(VERSION 3.12)
 project(TJURM-2024)
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # 设置编译指令
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-# set(CMAKE_BUILD_TYPE DEBUG)
-# add_compile_options(-g -O0 -w -fno-omit-frame-pointer -Wno-notes)
-add_compile_options(-g)
-set(CMAKE_BUILD_TYPE RELEASE)
-add_compile_options(-O2)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+#调试：
+set(CMAKE_BUILD_TYPE DEBUG)
+add_compile_options(-w -fno-omit-frame-pointer -Wno-notes)
+#发布：
+# set(CMAKE_BUILD_TYPE RELEASE)
+# add_compile_options(-w)
 
 # 设置目标兵种
 # add_definitions(-DTJURM_HERO)
